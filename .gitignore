@@ -1,3 +1,13 @@
 node_modules/
 dist/
-./Dockerfile
+Dockerfile
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.vscode/
+.idea/
+info.txt
+requirements.txt
+dummy-cert.pdf
