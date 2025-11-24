@@ -238,7 +238,7 @@ describe('SubmissionService', () => {
       };
 
       await expect(service.create(createSubmissionDto, largeMockFile)).rejects.toThrow(
-        new BadRequestException('File size exceeds the limit of 2MB.'),
+        new BadRequestException('File size exceeds the limit of 2MB. Please upload a correct file.'),
       );
     });
   });

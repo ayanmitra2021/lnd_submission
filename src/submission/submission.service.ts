@@ -19,7 +19,7 @@ export class SubmissionService {
     file: Express.Multer.File,
   ): Promise<Submission> {
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      throw new BadRequestException('File size exceeds the limit of 2MB.');
+      throw new BadRequestException('File size exceeds the limit of 2MB. Please upload a correct file.');
     }
 
     const completionDate = new Date(createSubmissionDto.dateOfCompletion);
