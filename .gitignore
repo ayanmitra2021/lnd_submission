@@ -1,5 +1,6 @@
 node_modules/
 dist/
+keys/
 Dockerfile
 .env
 .env.local
@@ -11,3 +12,4 @@ Dockerfile
 info.txt
 requirements.txt
 dummy-cert.pdf
+learning-automation-476812-bc4733c11665.json

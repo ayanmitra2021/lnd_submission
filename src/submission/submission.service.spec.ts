@@ -5,11 +5,16 @@ import { Submission } from './entities/submission.entity';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { BadRequestException } from '@nestjs/common';
+import { StorageService } from '../common/gcp/storage/storage.service';
 
 const mockSubmissionRepository = {
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+};
+
+const mockStorageService = {
+  uploadFile: jest.fn(),
 };
 
 describe('SubmissionService', () => {
@@ -22,6 +27,10 @@ describe('SubmissionService', () => {
         {
           provide: getRepositoryToken(Submission),
           useValue: mockSubmissionRepository,
+        },
+        {
+          provide: StorageService,
+          useValue: mockStorageService,
         },
       ],
     }).compile();
@@ -80,6 +89,7 @@ describe('SubmissionService', () => {
       mockSubmissionRepository.findOne.mockResolvedValue(null);
       mockSubmissionRepository.create.mockReturnValue(submissionPayload);
       mockSubmissionRepository.save.mockResolvedValue(savedSubmission);
+      mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
 
       const result = await service.create(createSubmissionDto, mockFile);
 
@@ -117,6 +127,7 @@ describe('SubmissionService', () => {
       };
       
       mockSubmissionRepository.findOne.mockResolvedValue(existingSubmission);
+      mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
 
       // The service modifies the existing submission object directly
       const updatedSubmissionInDb = {
@@ -171,6 +182,7 @@ describe('SubmissionService', () => {
       mockSubmissionRepository.findOne.mockResolvedValue(null);
       mockSubmissionRepository.create.mockReturnValue(submissionPayload);
       mockSubmissionRepository.save.mockResolvedValue(savedSubmission);
+      mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
 
       const result = await service.create(createSubmissionDto, mockFile);
 
@@ -241,5 +253,47 @@ describe('SubmissionService', () => {
         new BadRequestException('File size exceeds the limit of 2MB. Please upload a correct file.'),
       );
     });
+
+    it('should call the storage service to upload the file', async () => {
+        const createSubmissionDto: CreateSubmissionDto = {
+          practitionerName: 'John Doe',
+          practitionerEmail: 'test@test.com',
+          marketOffering: 'Offering A',
+          learningPillarL5: 'Pillar B',
+          courseCode: 'C-123',
+          courseCertification: 'Test Course',
+          hoursCompleted: 10,
+          dateOfCompletion: `${currentYear}-01-15`,
+        };
+        
+        mockSubmissionRepository.findOne.mockResolvedValue(null);
+        mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
+  
+        await service.create(createSubmissionDto, mockFile);
+  
+        expect(mockStorageService.uploadFile).toHaveBeenCalledWith(
+          mockFile,
+          expect.stringMatching(/^[0-9a-fA-F-]{36}\.pdf$/),
+        );
+      });
+  
+      it('should throw an error if file upload fails', async () => {
+        const createSubmissionDto: CreateSubmissionDto = {
+          practitionerName: 'John Doe',
+          practitionerEmail: 'test@test.com',
+          marketOffering: 'Offering A',
+          learningPillarL5: 'Pillar B',
+          courseCode: 'C-123',
+          courseCertification: 'Test Course',
+          hoursCompleted: 10,
+          dateOfCompletion: `${currentYear}-01-15`,
+        };
+  
+        mockStorageService.uploadFile.mockRejectedValue(new Error('Upload failed'));
+  
+        await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
+          'Could not upload certificate file.',
+        );
+      });
   });
 });

@@ -9,12 +9,12 @@ docker exec -it my-dev-container bash
 curl --location --request POST 'http://localhost:3000/api/learning-submission' \
 --form 'certificate=@"./dummy-cert.pdf"' \
 --form 'submissionData="{
-  \"practitionerName\": \"Peter Doe\",
-  \"practitionerEmail\": \"Pete.doe@example.com\",
-  \"marketOffering\": \"ConnectedEdge\",
-  \"learningPillarL5\": \"Digital Transformation\",
+  \"practitionerName\": \"Mitra Doe\",
+  \"practitionerEmail\": \"Mitra.doe@example.com\",
+  \"marketOffering\": \"Hybrid Cloud Transformation\",
+  \"learningPillarL5\": \"Hybrid Cloud Migration\",
   \"courseCode\": \"CS102\",
   \"courseCertification\": \"Introduction to GenAI\",
   \"hoursCompleted\": 2,
-  \"dateOfCompletion\": \"2025-11-24\"
+  \"dateOfCompletion\": \"2025-11-23\"
 }"'
