@@ -5,6 +5,8 @@ import { Submission } from './entities/submission.entity';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { v4 as uuidv4 } from 'uuid';
 
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+
 @Injectable()
 export class SubmissionService {
   constructor(
@@ -16,6 +18,10 @@ export class SubmissionService {
     createSubmissionDto: CreateSubmissionDto,
     file: Express.Multer.File,
   ): Promise<Submission> {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      throw new BadRequestException('File size exceeds the limit of 2MB.');
+    }
+
     const completionDate = new Date(createSubmissionDto.dateOfCompletion);
     const currentYear = new Date().getFullYear();
 

@@ -219,5 +219,27 @@ describe('SubmissionService', () => {
         new BadRequestException('Date of completion cannot be in a previous calendar year.'),
       );
     });
+
+    it('should throw a BadRequestException if file size exceeds 2MB', async () => {
+      const createSubmissionDto: CreateSubmissionDto = {
+        practitionerName: 'John Doe',
+        practitionerEmail: 'test@test.com',
+        marketOffering: 'Offering A',
+        learningPillarL5: 'Pillar B',
+        courseCode: 'C-123',
+        courseCertification: 'Large File Course',
+        hoursCompleted: 10,
+        dateOfCompletion: `${currentYear}-01-15`,
+      };
+
+      const largeMockFile: Express.Multer.File = {
+        ...mockFile,
+        size: 2 * 1024 * 1024 + 1, // 2MB + 1 byte
+      };
+
+      await expect(service.create(createSubmissionDto, largeMockFile)).rejects.toThrow(
+        new BadRequestException('File size exceeds the limit of 2MB.'),
+      );
+    });
   });
 });
