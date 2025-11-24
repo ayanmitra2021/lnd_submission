@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Submission } from './entities/submission.entity';
@@ -11,6 +11,7 @@ const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 
 @Injectable()
 export class SubmissionService {
+  private readonly logger = new Logger(SubmissionService.name);
   constructor(
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
@@ -40,7 +41,7 @@ export class SubmissionService {
     
     // In a real application, you would upload the file.buffer to a cloud bucket here
     // and get a URL. For now, we just generate the GUID.
-    console.log(`Uploading file: ${file.originalname}`);
+    this.logger.log(`Uploading file: ${file.originalname}`);
     const certificateGuid = uuidv4();
     const fileExtension = path.extname(file.originalname);
     const destinationFileName = `${certificateGuid}${fileExtension}`;
@@ -50,9 +51,9 @@ export class SubmissionService {
         file,
         destinationFileName,
       );
-      console.log(`File available at: ${publicUrl}`);
+      this.logger.log(`File available at: ${publicUrl}`);
     } catch (error) {
-      console.error('File upload failed', error);
+      this.logger.error('File upload failed', error.stack);
       throw new Error('Could not upload certificate file.');
     }
     
@@ -68,7 +69,7 @@ export class SubmissionService {
 
     if (existingSubmission) {
       // Update the existing record. This is needed to updated the records for the current PY. 
-      console.log('Updating existing submission...');
+      this.logger.log('Updating existing submission...');
       existingSubmission.coursename = createSubmissionDto.courseCertification;
       existingSubmission.hourscompleted = createSubmissionDto.hoursCompleted;
       existingSubmission.dateofcompletion = createSubmissionDto.dateOfCompletion;
@@ -76,7 +77,7 @@ export class SubmissionService {
       return this.submissionRepository.save(existingSubmission);
     } else {
       // Create a new record
-      console.log('Creating new submission...');
+      this.logger.log('Creating new submission...');
       const newSubmission = this.submissionRepository.create({
         practitioneremail: createSubmissionDto.practitionerEmail,
         coursecode: createSubmissionDto.courseCode,

@@ -5,7 +5,8 @@ import {
     UploadedFile,
     Body,
     ParseFilePipe,
-    MaxFileSizeValidator
+    MaxFileSizeValidator,
+    Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SubmissionService } from './submission.service';
@@ -13,6 +14,7 @@ import { CreateSubmissionDto } from './dto/create-submission.dto';
 
 @Controller('learning-submission')
 export class SubmissionController {
+  private readonly logger = new Logger(SubmissionController.name);
   constructor(private readonly submissionService: SubmissionService) {}
 
   @Post()
@@ -32,8 +34,8 @@ export class SubmissionController {
     // We can even re-validate it after parsing
     // (Requires enabling ValidationPipe globally in main.ts - see Step 8)
     
-    console.log('Received file:', file.originalname);
-    console.log('Received data:', submissionData);
+    this.logger.log(`Received file: ${file.originalname}`);
+    this.logger.log(`Received data: ${JSON.stringify(submissionData)}`);
 
     return this.submissionService.create(submissionData, file);
   }
