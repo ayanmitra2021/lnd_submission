@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Submission } from './entities/submission.entity';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,15 +16,32 @@ export class SubmissionService {
     createSubmissionDto: CreateSubmissionDto,
     file: Express.Multer.File,
   ): Promise<Submission> {
+    const completionDate = new Date(createSubmissionDto.dateOfCompletion);
+    const currentYear = new Date().getFullYear();
+
+    if (completionDate > new Date()) {
+      throw new BadRequestException('Date of completion cannot be in the future.');
+    }
+
+    if (completionDate.getFullYear() < currentYear) {
+      throw new BadRequestException(
+        'Date of completion cannot be in a previous calendar year.',
+      );
+    }
+    
     // In a real application, you would upload the file.buffer to a cloud bucket here
     // and get a URL. For now, we just generate the GUID.
     console.log(`Simulating upload for file: ${file.originalname}`);
     const certificateGuid = uuidv4();
 
     // The RFC requires overwriting an existing record for the same course/user.
-    const existingSubmission = await this.submissionRepository.findOneBy({
-      practitioneremail: createSubmissionDto.practitionerEmail,
-      coursecode: createSubmissionDto.courseCode,
+    const startOfCurrentYear = new Date(currentYear, 0, 1);
+    const existingSubmission = await this.submissionRepository.findOne({
+      where: {
+        practitioneremail: createSubmissionDto.practitionerEmail,
+        coursecode: createSubmissionDto.courseCode,
+        dateofcompletion: MoreThanOrEqual(startOfCurrentYear.toISOString().split('T')[0]),
+      },
     });
 
     if (existingSubmission) {
