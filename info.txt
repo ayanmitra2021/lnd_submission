@@ -1,0 +1,5 @@
+DB user - dockeruser
+DB password - dockeruser
+DB Name - lndsubmission
+
+docker run -d --name my-dev-container -p 3000:3000 -v "%cd%:/app" ubuntu-gcloud-dev:latest tail -f /dev/null
