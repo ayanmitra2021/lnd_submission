@@ -28,7 +28,7 @@ export class SubmissionService {
     });
 
     if (existingSubmission) {
-      // Update the existing record
+      // Update the existing record. This is needed to updated the records for the current PY. 
       console.log('Updating existing submission...');
       existingSubmission.coursename = createSubmissionDto.courseCertification;
       existingSubmission.hourscompleted = createSubmissionDto.hoursCompleted;

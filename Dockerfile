@@ -67,5 +67,9 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 # install gemini-cli
 RUN npm install -g @google/gemini-cli
 
+#setup git 
+RUN git config --global user.email "ayan_mitra@outlook.com"
+RUN git config --global user.name "Ayan"  
+
 # Keep the container running
 CMD ["tail", "-f", "/dev/null"]
