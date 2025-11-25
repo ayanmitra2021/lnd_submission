@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SubmissionModule } from './submission/submission.module';
-import { GcpModule } from './common/gcp/gcp.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
@@ -36,7 +36,7 @@ import { GcpModule } from './common/gcp/gcp.module';
     // 3. Import your other feature modules
     SubmissionModule,
 
-    GcpModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

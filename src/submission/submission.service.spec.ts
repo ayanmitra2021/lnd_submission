@@ -5,7 +5,7 @@ import { Submission } from './entities/submission.entity';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { BadRequestException } from '@nestjs/common';
-import { StorageService } from '../common/gcp/storage/storage.service';
+import { StorageService } from '../common/storage/storage.service.interface';
 
 const mockSubmissionRepository = {
   findOne: jest.fn(),

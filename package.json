@@ -20,6 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.525.0",
+    "@azure/storage-blob": "^12.17.0",
     "@google-cloud/storage": "^7.17.3",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",

@@ -4,7 +4,7 @@ import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Submission } from './entities/submission.entity';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { StorageService } from '../common/gcp/storage/storage.service';
+import { StorageService } from '../common/storage/storage.service.interface';
 import * as path from 'path';
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
