@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
 import { StorageService } from '../../storage/storage.service.interface';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class AzureStorageService implements StorageService {
@@ -9,11 +10,14 @@ export class AzureStorageService implements StorageService {
   private readonly bucketName: string;
   private readonly logger = new Logger(AzureStorageService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor() {
+    const keyFilePath = path.join(process.cwd(), '/keys/azure-credentials.json');
+    const keyFile = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+
     this.blobServiceClient = BlobServiceClient.fromConnectionString(
-      this.configService.get<string>('AZURE_STORAGE_CONNECTION_STRING'),
+      keyFile.connectionString,
     );
-    this.bucketName = this.configService.get<string>('AZURE_BUCKET_NAME');
+    this.bucketName = keyFile.bucketName;
   }
 
   async uploadFile(

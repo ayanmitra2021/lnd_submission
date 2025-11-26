@@ -1,24 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { StorageService } from '../../storage/storage.service.interface';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class AwsStorageService implements StorageService {
   private readonly s3: S3Client;
   private readonly bucketName: string;
   private readonly logger = new Logger(AwsStorageService.name);
+  private readonly region: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor() {
+    const keyFilePath = path.join(process.cwd(), '/keys/aws-credentials.json');
+    const keyFile = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+
     this.s3 = new S3Client({
-      region: this.configService.get<string>('AWS_REGION'),
+      region: keyFile.region,
       credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY'),
+        accessKeyId: keyFile.accessKeyId,
+        secretAccessKey: keyFile.secretAccessKey,
       },
     });
 
-    this.bucketName = this.configService.get<string>('AWS_BUCKET_NAME');
+    this.bucketName = keyFile.bucketName;
+    this.region = keyFile.region;
   }
 
   async uploadFile(
@@ -37,7 +43,7 @@ export class AwsStorageService implements StorageService {
       this.logger.log(`Successfully uploaded ${destinationFileName} to S3`);
       // Construct the public URL. This might vary based on bucket settings.
       // Assuming the bucket is public-read.
-      const publicUrl = `https://${this.bucketName}.s3.${this.configService.get<string>('AWS_REGION')}.amazonaws.com/${destinationFileName}`;
+      const publicUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${destinationFileName}`;
       return publicUrl;
     } catch (err) {
       this.logger.error(`Failed to upload ${destinationFileName} to S3`, err);

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
 import * as path from 'path';
+import * as fs from 'fs';
 import { StorageService as IStorageService } from '../../storage/storage.service.interface';
 
 @Injectable()
@@ -10,13 +10,16 @@ export class GcpStorageService implements IStorageService {
   private readonly bucketName: string;
   private readonly logger = new Logger(GcpStorageService.name);
 
-  constructor(private readonly configService: ConfigService) {
-     this.storage = new Storage({
-      projectId: this.configService.get<string>('GCP_PROJECT_ID'),
-      keyFilename: path.join(process.cwd(), '/keys/gcp-service-account-key.json'),
+  constructor() {
+    const keyFilePath = path.join(process.cwd(), '/keys/gcp-service-account-key.json');
+    const keyFile = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+
+    this.storage = new Storage({
+      projectId: keyFile.project_id,
+      keyFilename: keyFilePath,
     });
 
-    this.bucketName = this.configService.get<string>('GCP_BUCKET_NAME');
+    this.bucketName = keyFile.bucket_name;
   }
 
   async uploadFile(
