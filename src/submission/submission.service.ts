@@ -6,6 +6,7 @@ import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '../common/storage/storage.service.interface';
 import * as path from 'path';
+import { CourseCatalog } from './entities/coursecatalog.entity';
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 
@@ -15,6 +16,8 @@ export class SubmissionService {
   constructor(
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
+    @InjectRepository(CourseCatalog)
+    private readonly courseCatalogRepository: Repository<CourseCatalog>,
     private readonly storageService: StorageService,
   ) {}
 
@@ -37,6 +40,25 @@ export class SubmissionService {
       throw new BadRequestException(
         'Date of completion cannot be in a previous calendar year.',
       );
+    }
+
+    let hoursallocated: number;
+    let islisted: boolean;
+
+    if (createSubmissionDto.courseCode === '00000') {
+      hoursallocated = createSubmissionDto.hoursCompleted;
+      islisted = false;
+    } else {
+      const course = await this.courseCatalogRepository.findOne({
+        where: { coursecode: createSubmissionDto.courseCode },
+      });
+      if (!course) {
+        throw new BadRequestException(
+          `Course with code "${createSubmissionDto.courseCode}" not found in Course Catalog.`,
+        );
+      }
+      hoursallocated = course.duration;
+      islisted = true;
     }
     
     // In a real application, you would upload the file.buffer to a cloud bucket here
@@ -74,6 +96,8 @@ export class SubmissionService {
       existingSubmission.hourscompleted = createSubmissionDto.hoursCompleted;
       existingSubmission.dateofcompletion = createSubmissionDto.dateOfCompletion;
       existingSubmission.certificateguid = certificateGuid; // Link the new certificate
+      existingSubmission.hoursallocated = hoursallocated;
+      existingSubmission.islisted = islisted;
       return this.submissionRepository.save(existingSubmission);
     } else {
       // Create a new record
@@ -85,6 +109,8 @@ export class SubmissionService {
         hourscompleted: createSubmissionDto.hoursCompleted,
         dateofcompletion: createSubmissionDto.dateOfCompletion,
         certificateguid: certificateGuid,
+        hoursallocated,
+        islisted,
       });
       return this.submissionRepository.save(newSubmission);
     }

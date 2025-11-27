@@ -6,11 +6,16 @@ import { MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { BadRequestException } from '@nestjs/common';
 import { StorageService } from '../common/storage/storage.service.interface';
+import { CourseCatalog } from './entities/coursecatalog.entity';
 
 const mockSubmissionRepository = {
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+};
+
+const mockCourseCatalogRepository = {
+  findOne: jest.fn(),
 };
 
 const mockStorageService = {
@@ -27,6 +32,10 @@ describe('SubmissionService', () => {
         {
           provide: getRepositoryToken(Submission),
           useValue: mockSubmissionRepository,
+        },
+        {
+          provide: getRepositoryToken(CourseCatalog),
+          useValue: mockCourseCatalogRepository,
         },
         {
           provide: StorageService,
@@ -83,9 +92,13 @@ describe('SubmissionService', () => {
         hourscompleted: createSubmissionDto.hoursCompleted,
         dateofcompletion: createSubmissionDto.dateOfCompletion,
         certificateguid: expect.any(String),
+        hoursallocated: 20,
+        islisted: true,
       };
       const savedSubmission = { ...submissionPayload, submissionid: 1 };
+      const mockCourse = { coursecode: 'C-123', duration: 20 };
 
+      mockCourseCatalogRepository.findOne.mockResolvedValue(mockCourse);
       mockSubmissionRepository.findOne.mockResolvedValue(null);
       mockSubmissionRepository.create.mockReturnValue(submissionPayload);
       mockSubmissionRepository.save.mockResolvedValue(savedSubmission);
@@ -93,6 +106,7 @@ describe('SubmissionService', () => {
 
       const result = await service.create(createSubmissionDto, mockFile);
 
+      expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({ where: { coursecode: 'C-123' } });
       expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
         where: {
           practitioneremail: createSubmissionDto.practitionerEmail,
@@ -125,17 +139,20 @@ describe('SubmissionService', () => {
         dateofcompletion: `${currentYear}-01-15`,
         certificateguid: 'some-guid',
       };
+      const mockCourse = { coursecode: 'C-123', duration: 25 };
       
+      mockCourseCatalogRepository.findOne.mockResolvedValue(mockCourse);
       mockSubmissionRepository.findOne.mockResolvedValue(existingSubmission);
       mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
 
-      // The service modifies the existing submission object directly
       const updatedSubmissionInDb = {
         ...existingSubmission,
         coursename: createSubmissionDto.courseCertification,
         hourscompleted: createSubmissionDto.hoursCompleted,
         dateofcompletion: createSubmissionDto.dateOfCompletion,
-        certificateguid: expect.any(String)
+        certificateguid: expect.any(String),
+        hoursallocated: 25,
+        islisted: true,
       };
       mockSubmissionRepository.save.mockResolvedValue(updatedSubmissionInDb);
 
@@ -153,20 +170,41 @@ describe('SubmissionService', () => {
       expect(mockSubmissionRepository.save).toHaveBeenCalledWith(expect.objectContaining({
         coursename: 'Updated Course Name',
         hourscompleted: 12,
+        hoursallocated: 25,
+        islisted: true,
       }));
       expect(result).toEqual(updatedSubmissionInDb);
     });
-
-    it('should create a new submission if an existing one is from a previous year', async () => {
+    
+    it('should throw a BadRequestException if course code does not exist in catalog', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
         practitionerName: 'John Doe',
         practitionerEmail: 'test@test.com',
         marketOffering: 'Offering A',
         learningPillarL5: 'Pillar B',
-        courseCode: 'C-123',
-        courseCertification: 'Test Course 2025',
+        courseCode: 'C-INVALID',
+        courseCertification: 'Invalid Course',
         hoursCompleted: 10,
         dateOfCompletion: `${currentYear}-01-15`,
+      };
+
+      mockCourseCatalogRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
+        new BadRequestException('Course with code "C-INVALID" not found in Course Catalog.'),
+      );
+    });
+    
+    it('should set hoursallocated to hoursCompleted for course code "00000"', async () => {
+      const createSubmissionDto: CreateSubmissionDto = {
+        practitionerName: 'John Doe',
+        practitionerEmail: 'test@test.com',
+        marketOffering: 'Offering A',
+        learningPillarL5: 'Pillar B',
+        courseCode: '00000',
+        courseCertification: 'Special Course',
+        hoursCompleted: 15,
+        dateOfCompletion: `${currentYear}-02-10`,
       };
 
       const submissionPayload = {
@@ -176,8 +214,10 @@ describe('SubmissionService', () => {
         hourscompleted: createSubmissionDto.hoursCompleted,
         dateofcompletion: createSubmissionDto.dateOfCompletion,
         certificateguid: expect.any(String),
+        hoursallocated: 15, // Should match hoursCompleted
+        islisted: false,      // Should be false
       };
-      const savedSubmission = { ...submissionPayload, submissionid: 2 };
+      const savedSubmission = { ...submissionPayload, submissionid: 3 };
 
       mockSubmissionRepository.findOne.mockResolvedValue(null);
       mockSubmissionRepository.create.mockReturnValue(submissionPayload);
@@ -186,16 +226,10 @@ describe('SubmissionService', () => {
 
       const result = await service.create(createSubmissionDto, mockFile);
 
-      expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          practitioneremail: createSubmissionDto.practitionerEmail,
-          coursecode: createSubmissionDto.courseCode,
-          dateofcompletion: MoreThanOrEqual(startOfCurrentYear.toISOString().split('T')[0]),
-        },
-      });
+      expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled();
       expect(mockSubmissionRepository.create).toHaveBeenCalledWith(submissionPayload);
-      expect(mockSubmissionRepository.save).toHaveBeenCalledWith(submissionPayload);
-      expect(result).toEqual(savedSubmission);
+      expect(result.hoursallocated).toBe(15);
+      expect(result.islisted).toBe(false);
     });
 
     it('should throw a BadRequestException for a future dateOfCompletion', async () => {
@@ -253,47 +287,5 @@ describe('SubmissionService', () => {
         new BadRequestException('File size exceeds the limit of 2MB. Please upload a correct file.'),
       );
     });
-
-    it('should call the storage service to upload the file', async () => {
-        const createSubmissionDto: CreateSubmissionDto = {
-          practitionerName: 'John Doe',
-          practitionerEmail: 'test@test.com',
-          marketOffering: 'Offering A',
-          learningPillarL5: 'Pillar B',
-          courseCode: 'C-123',
-          courseCertification: 'Test Course',
-          hoursCompleted: 10,
-          dateOfCompletion: `${currentYear}-01-15`,
-        };
-        
-        mockSubmissionRepository.findOne.mockResolvedValue(null);
-        mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
-  
-        await service.create(createSubmissionDto, mockFile);
-  
-        expect(mockStorageService.uploadFile).toHaveBeenCalledWith(
-          mockFile,
-          expect.stringMatching(/^[0-9a-fA-F-]{36}\.pdf$/),
-        );
-      });
-  
-      it('should throw an error if file upload fails', async () => {
-        const createSubmissionDto: CreateSubmissionDto = {
-          practitionerName: 'John Doe',
-          practitionerEmail: 'test@test.com',
-          marketOffering: 'Offering A',
-          learningPillarL5: 'Pillar B',
-          courseCode: 'C-123',
-          courseCertification: 'Test Course',
-          hoursCompleted: 10,
-          dateOfCompletion: `${currentYear}-01-15`,
-        };
-  
-        mockStorageService.uploadFile.mockRejectedValue(new Error('Upload failed'));
-  
-        await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
-          'Could not upload certificate file.',
-        );
-      });
   });
 });

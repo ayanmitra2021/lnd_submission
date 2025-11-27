@@ -25,6 +25,12 @@ export class Submission {
   @Column({ type: 'decimal', precision: 5, scale: 2 })
   hourscompleted: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  hoursallocated: number;
+
+  @Column({ type: 'boolean', default: false })
+  islisted: boolean;
+
   @Column({ type: 'date' })
   dateofcompletion: string;
 
