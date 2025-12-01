@@ -7,6 +7,7 @@ import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { BadRequestException } from '@nestjs/common';
 import { StorageService } from '../common/storage/storage.service.interface';
 import { CourseCatalog } from './entities/coursecatalog.entity';
+import { ConfigService } from '@nestjs/config';
 
 const mockSubmissionRepository = {
   findOne: jest.fn(),
@@ -40,6 +41,20 @@ describe('SubmissionService', () => {
         {
           provide: StorageService,
           useValue: mockStorageService,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'MAX_FILE_SIZE_BYTES') {
+                return 2 * 1024 * 1024; // 2MB
+              }
+              if (key === 'UNLISTED_COURSE_CODE') {
+                return '00000';
+              }
+              return null;
+            }),
+          },
         },
       ],
     }).compile();

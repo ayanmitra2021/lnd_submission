@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Submission } from './entities/submission.entity';
@@ -8,24 +9,29 @@ import { StorageService } from '../common/storage/storage.service.interface';
 import * as path from 'path';
 import { CourseCatalog } from './entities/coursecatalog.entity';
 
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
-
 @Injectable()
 export class SubmissionService {
   private readonly logger = new Logger(SubmissionService.name);
+  private readonly maxFileSize: number;
+  private readonly unlistedCourseCode: string;
+
   constructor(
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
     @InjectRepository(CourseCatalog)
     private readonly courseCatalogRepository: Repository<CourseCatalog>,
     private readonly storageService: StorageService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.maxFileSize = +this.configService.get<number>('MAX_FILE_SIZE_BYTES');
+    this.unlistedCourseCode = this.configService.get<string>('UNLISTED_COURSE_CODE');
+  }
 
   async create(
     createSubmissionDto: CreateSubmissionDto,
     file: Express.Multer.File,
   ): Promise<Submission> {
-    if (file.size > MAX_FILE_SIZE_BYTES) {
+    if (file.size > this.maxFileSize) {
       throw new BadRequestException('File size exceeds the limit of 2MB. Please upload a correct file.');
     }
 
@@ -45,7 +51,7 @@ export class SubmissionService {
     let hoursallocated: number;
     let islisted: boolean;
 
-    if (createSubmissionDto.courseCode === '00000') {
+    if (createSubmissionDto.courseCode === this.unlistedCourseCode) {
       hoursallocated = createSubmissionDto.hoursCompleted;
       islisted = false;
     } else {
