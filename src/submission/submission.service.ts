@@ -56,11 +56,14 @@ export class SubmissionService {
       islisted = false;
     } else {
       const course = await this.courseCatalogRepository.findOne({
-        where: { coursecode: createSubmissionDto.courseCode },
+        where: {
+          coursecode: createSubmissionDto.courseCode,
+          IsActive: true,
+        },
       });
       if (!course) {
         throw new BadRequestException(
-          `Course with code "${createSubmissionDto.courseCode}" not found in Course Catalog.`,
+          `Course with code "${createSubmissionDto.courseCode}" is either not available or is inactive.`,
         );
       }
       hoursallocated = course.duration;

@@ -1,5 +1,11 @@
 
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity({ name: 'coursecatalog' })
 export class CourseCatalog {
@@ -38,4 +44,13 @@ export class CourseCatalog {
 
   @Column('text', { nullable: true })
   keywords: string;
+
+  @Column({ type: 'boolean', default: true })
+  IsActive: boolean;
+
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  CreatedTimestamp: Date;
+
+  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  LastModifiedTimestamp: Date;
 }

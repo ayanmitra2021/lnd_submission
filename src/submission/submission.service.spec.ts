@@ -10,8 +10,8 @@ import { CourseCatalog } from './entities/coursecatalog.entity';
 import { ConfigService } from '@nestjs/config';
 
 const mockSubmissionRepository = {
-  findOne: jest.fn(),
   create: jest.fn(),
+  findOne: jest.fn(),
   save: jest.fn(),
 };
 
@@ -71,16 +71,16 @@ describe('SubmissionService', () => {
   });
 
   const mockFile: Express.Multer.File = {
-    fieldname: 'file',
-    originalname: 'test.pdf',
-    encoding: '7bit',
-    mimetype: 'application/pdf',
-    size: 1024,
     buffer: Buffer.from('test'),
-    stream: null,
     destination: '',
+    encoding: '7bit',
+    fieldname: 'file',
     filename: '',
+    mimetype: 'application/pdf',
+    originalname: 'test.pdf',
     path: '',
+    size: 1024,
+    stream: null,
   };
 
   const currentYear = new Date().getFullYear();
@@ -90,25 +90,25 @@ describe('SubmissionService', () => {
   describe('create', () => {
     it('should create a new submission if one does not exist for the current year', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: 'C-123',
         courseCertification: 'Test Course',
-        hoursCompleted: 10,
+        courseCode: 'C-123',
         dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
 
       const submissionPayload = {
-        practitioneremail: createSubmissionDto.practitionerEmail,
+        certificateguid: expect.any(String),
         coursecode: createSubmissionDto.courseCode,
         coursename: createSubmissionDto.courseCertification,
-        hourscompleted: createSubmissionDto.hoursCompleted,
         dateofcompletion: createSubmissionDto.dateOfCompletion,
-        certificateguid: expect.any(String),
         hoursallocated: 20,
+        hourscompleted: createSubmissionDto.hoursCompleted,
         islisted: true,
+        practitioneremail: createSubmissionDto.practitionerEmail,
       };
       const savedSubmission = { ...submissionPayload, submissionid: 1 };
       const mockCourse = { coursecode: 'C-123', duration: 20 };
@@ -117,146 +117,195 @@ describe('SubmissionService', () => {
       mockSubmissionRepository.findOne.mockResolvedValue(null);
       mockSubmissionRepository.create.mockReturnValue(submissionPayload);
       mockSubmissionRepository.save.mockResolvedValue(savedSubmission);
-      mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
+      mockStorageService.uploadFile.mockResolvedValue(
+        'http://fake-url.com/file.pdf',
+      );
 
       const result = await service.create(createSubmissionDto, mockFile);
 
-      expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({ where: { coursecode: 'C-123' } });
+      expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({
+        where: { coursecode: 'C-123', IsActive: true },
+      });
       expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
         where: {
-          practitioneremail: createSubmissionDto.practitionerEmail,
           coursecode: createSubmissionDto.courseCode,
-          dateofcompletion: MoreThanOrEqual(startOfCurrentYear.toISOString().split('T')[0]),
+          dateofcompletion: MoreThanOrEqual(
+            startOfCurrentYear.toISOString().split('T')[0],
+          ),
+          practitioneremail: createSubmissionDto.practitionerEmail,
         },
       });
-      expect(mockSubmissionRepository.create).toHaveBeenCalledWith(submissionPayload);
-      expect(mockSubmissionRepository.save).toHaveBeenCalledWith(submissionPayload);
+      expect(mockSubmissionRepository.create).toHaveBeenCalledWith(
+        submissionPayload,
+      );
+      expect(mockSubmissionRepository.save).toHaveBeenCalledWith(
+        submissionPayload,
+      );
       expect(result).toEqual(savedSubmission);
     });
 
     it('should update an existing submission if one exists for the current year', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: 'C-123',
         courseCertification: 'Updated Course Name',
-        hoursCompleted: 12,
+        courseCode: 'C-123',
         dateOfCompletion: `${currentYear}-03-20`,
+        hoursCompleted: 12,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
       const existingSubmission = {
-        submissionid: 1,
-        practitioneremail: 'test@test.com',
+        certificateguid: 'some-guid',
         coursecode: 'C-123',
         coursename: 'Old Course Name',
-        hourscompleted: 10,
         dateofcompletion: `${currentYear}-01-15`,
-        certificateguid: 'some-guid',
+        hourscompleted: 10,
+        practitioneremail: 'test@test.com',
+        submissionid: 1,
       };
       const mockCourse = { coursecode: 'C-123', duration: 25 };
-      
+
       mockCourseCatalogRepository.findOne.mockResolvedValue(mockCourse);
       mockSubmissionRepository.findOne.mockResolvedValue(existingSubmission);
-      mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
+      mockStorageService.uploadFile.mockResolvedValue(
+        'http://fake-url.com/file.pdf',
+      );
 
       const updatedSubmissionInDb = {
         ...existingSubmission,
-        coursename: createSubmissionDto.courseCertification,
-        hourscompleted: createSubmissionDto.hoursCompleted,
-        dateofcompletion: createSubmissionDto.dateOfCompletion,
         certificateguid: expect.any(String),
+        coursename: createSubmissionDto.courseCertification,
+        dateofcompletion: createSubmissionDto.dateOfCompletion,
         hoursallocated: 25,
+        hourscompleted: createSubmissionDto.hoursCompleted,
         islisted: true,
       };
       mockSubmissionRepository.save.mockResolvedValue(updatedSubmissionInDb);
-
 
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
         where: {
-          practitioneremail: createSubmissionDto.practitionerEmail,
           coursecode: createSubmissionDto.courseCode,
-          dateofcompletion: MoreThanOrEqual(startOfCurrentYear.toISOString().split('T')[0]),
+          dateofcompletion: MoreThanOrEqual(
+            startOfCurrentYear.toISOString().split('T')[0],
+          ),
+          practitioneremail: createSubmissionDto.practitionerEmail,
         },
       });
 
-      expect(mockSubmissionRepository.save).toHaveBeenCalledWith(expect.objectContaining({
-        coursename: 'Updated Course Name',
-        hourscompleted: 12,
-        hoursallocated: 25,
-        islisted: true,
-      }));
+      expect(mockSubmissionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          coursename: 'Updated Course Name',
+          hoursallocated: 25,
+          hourscompleted: 12,
+          islisted: true,
+        }),
+      );
       expect(result).toEqual(updatedSubmissionInDb);
     });
-    
+
     it('should throw a BadRequestException if course code does not exist in catalog', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: 'C-INVALID',
         courseCertification: 'Invalid Course',
-        hoursCompleted: 10,
+        courseCode: 'C-INVALID',
         dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
 
       mockCourseCatalogRepository.findOne.mockResolvedValue(null);
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
-        new BadRequestException('Course with code "C-INVALID" not found in Course Catalog.'),
+        new BadRequestException(
+          `Course with code "C-INVALID" is either not available or is inactive.`,
+        ),
       );
     });
-    
+
+    it('should throw a BadRequestException if the course is inactive', async () => {
+      const createSubmissionDto: CreateSubmissionDto = {
+        courseCertification: 'Inactive Course',
+        courseCode: 'C-INACTIVE',
+        dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
+      };
+
+      mockCourseCatalogRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
+        new BadRequestException(
+          `Course with code "C-INACTIVE" is either not available or is inactive.`,
+        ),
+      );
+
+      expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          coursecode: 'C-INACTIVE',
+          IsActive: true,
+        },
+      });
+    });
+
     it('should set hoursallocated to hoursCompleted for course code "00000"', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: '00000',
         courseCertification: 'Special Course',
-        hoursCompleted: 15,
+        courseCode: '00000',
         dateOfCompletion: `${currentYear}-02-10`,
+        hoursCompleted: 15,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
 
       const submissionPayload = {
-        practitioneremail: createSubmissionDto.practitionerEmail,
+        certificateguid: expect.any(String),
         coursecode: createSubmissionDto.courseCode,
         coursename: createSubmissionDto.courseCertification,
-        hourscompleted: createSubmissionDto.hoursCompleted,
         dateofcompletion: createSubmissionDto.dateOfCompletion,
-        certificateguid: expect.any(String),
         hoursallocated: 15, // Should match hoursCompleted
-        islisted: false,      // Should be false
+        hourscompleted: createSubmissionDto.hoursCompleted,
+        islisted: false, // Should be false
+        practitioneremail: createSubmissionDto.practitionerEmail,
       };
       const savedSubmission = { ...submissionPayload, submissionid: 3 };
 
       mockSubmissionRepository.findOne.mockResolvedValue(null);
       mockSubmissionRepository.create.mockReturnValue(submissionPayload);
       mockSubmissionRepository.save.mockResolvedValue(savedSubmission);
-      mockStorageService.uploadFile.mockResolvedValue('http://fake-url.com/file.pdf');
+      mockStorageService.uploadFile.mockResolvedValue(
+        'http://fake-url.com/file.pdf',
+      );
 
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled();
-      expect(mockSubmissionRepository.create).toHaveBeenCalledWith(submissionPayload);
+      expect(mockSubmissionRepository.create).toHaveBeenCalledWith(
+        submissionPayload,
+      );
       expect(result.hoursallocated).toBe(15);
       expect(result.islisted).toBe(false);
     });
 
     it('should throw a BadRequestException for a future dateOfCompletion', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: 'C-123',
         courseCertification: 'Future Course',
-        hoursCompleted: 10,
+        courseCode: 'C-123',
         dateOfCompletion: `${currentYear + 1}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
@@ -266,31 +315,33 @@ describe('SubmissionService', () => {
 
     it('should throw a BadRequestException for a dateOfCompletion in a previous calendar year', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: 'C-123',
         courseCertification: 'Old Course',
-        hoursCompleted: 10,
+        courseCode: 'C-123',
         dateOfCompletion: `${lastYear}-12-31`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
-        new BadRequestException('Date of completion cannot be in a previous calendar year.'),
+        new BadRequestException(
+          'Date of completion cannot be in a previous calendar year.',
+        ),
       );
     });
 
     it('should throw a BadRequestException if file size exceeds 2MB', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
-        practitionerName: 'John Doe',
-        practitionerEmail: 'test@test.com',
-        marketOffering: 'Offering A',
-        learningPillarL5: 'Pillar B',
-        courseCode: 'C-123',
         courseCertification: 'Large File Course',
-        hoursCompleted: 10,
+        courseCode: 'C-123',
         dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
       };
 
       const largeMockFile: Express.Multer.File = {
@@ -298,8 +349,12 @@ describe('SubmissionService', () => {
         size: 2 * 1024 * 1024 + 1, // 2MB + 1 byte
       };
 
-      await expect(service.create(createSubmissionDto, largeMockFile)).rejects.toThrow(
-        new BadRequestException('File size exceeds the limit of 2MB. Please upload a correct file.'),
+      await expect(
+        service.create(createSubmissionDto, largeMockFile),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'File size exceeds the limit of 2MB. Please upload a correct file.',
+        ),
       );
     });
   });

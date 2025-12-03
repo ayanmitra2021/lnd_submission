@@ -56,7 +56,13 @@ CREATE TABLE CourseCatalog (
     PaidorFree VARCHAR(10) NOT NULL,
 
     -- This column can be empty.
-    Keywords TEXT
+    Keywords TEXT,
+
+    IsActive BOOLEAN DEFAULT TRUE,
+     -- The record creation time is automatically set to the current time.
+    CreatedTimestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    LastModifiedTimestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+   
 );
 
 -- Add comments for better documentation.
