@@ -75,3 +75,88 @@ ALTER TABLE practitionersubmissions
 ADD CONSTRAINT fk_coursecode
 FOREIGN KEY (coursecode)
 REFERENCES coursecatalog(coursecode);
+
+----------------------------------------------------------------------------------------------------
+
+-- Market Offering Master
+CREATE TABLE MarketOfferings (
+    -- BIGSERIAL is the PostgreSQL equivalent for a BIGINT that auto-increments.
+    MarketOfferingId BIGSERIAL PRIMARY KEY,
+	MarketOfferingName VARCHAR(2000) NOT NULL, 
+	MarketOfferingDescription TEXT
+)
+
+INSERT INTO MarketOfferings (MarketOfferingName, MarketOfferingDescription) VALUES ('Advanced Soft Skills','Advanced Soft Skills');
+INSERT INTO MarketOfferings (MarketOfferingName, MarketOfferingDescription) VALUES ('Alliances and Tech Relationships','Alliances and Tech Relationships');
+INSERT INTO MarketOfferings (MarketOfferingName, MarketOfferingDescription) VALUES ('Core','Core');
+INSERT INTO MarketOfferings (MarketOfferingName, MarketOfferingDescription) VALUES ('Connected Edge','Connected Edge');
+INSERT INTO MarketOfferings (MarketOfferingName, MarketOfferingDescription) VALUES ('Hybrid Cloud Transformation','Hybrid Cloud Transformation');
+INSERT INTO MarketOfferings (MarketOfferingName, MarketOfferingDescription) VALUES ('Hybrid Managed Services','Hybrid Managed Services');
+
+-- Learning Pillar Master
+CREATE TABLE LearningPillars (
+    -- BIGSERIAL is the PostgreSQL equivalent for a BIGINT that auto-increments.
+    LearningPillarId BIGSERIAL PRIMARY KEY,
+	MarketOfferingId BIGINT,
+	LearningPillarName VARCHAR(2000) NOT NULL,
+	LearningPillarDescription TEXT
+)
+
+ALTER TABLE learningpillars
+ADD CONSTRAINT fk_marketoffering
+FOREIGN KEY (marketofferingid)
+REFERENCES marketofferings(marketofferingid);
+
+
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (1, 'Client Relationships', 'Client Relationships');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (1, 'Coaching', 'Coaching');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (1, 'Teaming', 'Teaming');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (1, 'Storyboarding', 'Storyboarding');
+
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (2, 'AWS', 'AWS');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (2, 'Google', 'Google');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (2, 'Microsoft', 'Microsoft');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (2, 'Oracle', 'Oracle');
+
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (3, 'Fundamentals', 'Fundamentals');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (3, 'GenAI', 'GenAI');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (3, 'LinkedIn', 'LinkedIn');
+
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (4, 'Distributed AI Infrastructure', 'Distributed AI Infrastructure');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (4, 'Enterprise Networks', 'Enterprise Networks');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (4, 'Industrial Internet of Things (IIoT) Connectivity', 'Industrial Internet of Things (IIoT) Connectivity');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (4, 'Hybrid Edge AI Solutions', 'Hybrid Edge AI Solutions');
+
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (5, 'AI Data Center & Infrastructure', 'AI Data Center & Infrastructure');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (5, 'Oracle Cloud Infrastructure', 'Oracle Cloud Infrastructure');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (5, 'Modern Workplace', 'Modern Workplace');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (5, 'Hybrid Cloud Migration', 'Hybrid Cloud Migration');
+
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (6, 'AI/HPC Operations', 'AI/HPC Operations');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (6, 'Cloud Managed Services', 'Cloud Managed Services');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (6, 'Infrastructure Managed Services', 'Infrastructure Managed Services');
+INSERT INTO LearningPillars (MarketOfferingId, LearningPillarName, LearningPillarDescription) VALUES (6, 'Service Desk/EUC', 'Service Desk/EUC');
+
+-- General Master Values
+CREATE TABLE MasterValues (
+    -- BIGSERIAL is the PostgreSQL equivalent for a BIGINT that auto-increments.
+    MasterValueId BIGSERIAL PRIMARY KEY,
+    MasterValueColumn VARCHAR(255) NOT NULL,
+    AllowedValue VARCHAR(2000) NOT NULL
+)
+
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseLevel','Beginner');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseLevel','Advanced');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseLevel','Intermediate');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseLevel','Expert');
+
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('PaidOrFree','Free');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('PaidOrFree','Paid');
+
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Course');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Certification');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Document');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Course & Certification');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Course/Workshop');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Practice Test');
+INSERT INTO MasterValues (MasterValueColumn, AllowedValue) VALUES ('CourseOrCertification','Document/Certification');

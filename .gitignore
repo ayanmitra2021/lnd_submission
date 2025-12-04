@@ -1,6 +1,7 @@
 node_modules/
 dist/
 keys/
+dummyfiles/
 Dockerfile
 .env
 .env.local

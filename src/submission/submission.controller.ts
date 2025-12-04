@@ -7,10 +7,14 @@ import {
     ParseFilePipe,
     MaxFileSizeValidator,
     Logger,
+    Get,
+    Query,
+    ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SubmissionService } from './submission.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+import { GetSubmissionFilterDto } from './dto/get-submission-filter.dto';
 
 @Controller('learning-submission')
 export class SubmissionController {
@@ -38,5 +42,18 @@ export class SubmissionController {
     this.logger.log(`Received data: ${JSON.stringify(submissionData)}`);
 
     return this.submissionService.create(submissionData, file);
+  }
+
+  @Get()
+  async findAll(
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    )
+    filterDto: GetSubmissionFilterDto,
+  ) {
+    return this.submissionService.findAll(filterDto);
   }
 }

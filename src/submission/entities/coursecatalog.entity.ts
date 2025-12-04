@@ -46,11 +46,11 @@ export class CourseCatalog {
   keywords: string;
 
   @Column({ type: 'boolean', default: true })
-  IsActive: boolean;
+  isactive: boolean;
 
   @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  CreatedTimestamp: Date;
+  createdtimestamp: Date;
 
   @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  LastModifiedTimestamp: Date;
+  lastmodifiedtimestamp: Date;
 }

@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Submission } from './entities/submission.entity';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+import { GetSubmissionFilterDto } from './dto/get-submission-filter.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '../common/storage/storage.service.interface';
 import * as path from 'path';
@@ -58,7 +59,7 @@ export class SubmissionService {
       const course = await this.courseCatalogRepository.findOne({
         where: {
           coursecode: createSubmissionDto.courseCode,
-          IsActive: true,
+          isactive: true,
         },
       });
       if (!course) {
@@ -123,5 +124,49 @@ export class SubmissionService {
       });
       return this.submissionRepository.save(newSubmission);
     }
+  }
+
+  async findAll(filterDto: GetSubmissionFilterDto): Promise<Submission[]> {
+    const {
+      marketoffering,
+      learningpillar,
+      practitioneremail,
+      coursecode,
+      completionyear,
+    } = filterDto;
+
+    const query = this.submissionRepository
+      .createQueryBuilder('submission')
+      .leftJoinAndSelect('CourseCatalog', 'courseCatalog', 'submission.coursecode = courseCatalog.coursecode');
+
+    if (practitioneremail) {
+      query.andWhere('submission.practitioneremail = :practitioneremail', {
+        practitioneremail,
+      });
+    }
+
+    if (coursecode) {
+      query.andWhere('submission.coursecode = :coursecode', { coursecode });
+    }
+
+    if (marketoffering) {
+      query.andWhere('courseCatalog.marketoffering = :marketoffering', {
+        marketoffering,
+      });
+    }
+
+    if (learningpillar) {
+      query.andWhere('courseCatalog.learningpillar = :learningpillar', {
+        learningpillar,
+      });
+    }
+
+    if (completionyear) {
+      query.andWhere('EXTRACT(YEAR FROM submission.dateofcompletion) = :year', {
+        year: completionyear,
+      });
+    }
+
+    return query.getMany();
   }
 }

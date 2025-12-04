@@ -4,27 +4,130 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Submission } from './entities/submission.entity';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+import { GetSubmissionFilterDto } from './dto/get-submission-filter.dto'; // Import added
 import { BadRequestException } from '@nestjs/common';
 import { StorageService } from '../common/storage/storage.service.interface';
 import { CourseCatalog } from './entities/coursecatalog.entity';
 import { ConfigService } from '@nestjs/config';
 
-const mockSubmissionRepository = {
-  create: jest.fn(),
-  findOne: jest.fn(),
-  save: jest.fn(),
-};
-
-const mockCourseCatalogRepository = {
-  findOne: jest.fn(),
-};
-
-const mockStorageService = {
-  uploadFile: jest.fn(),
-};
-
 describe('SubmissionService', () => {
   let service: SubmissionService;
+  let submissionRepository: Repository<Submission>;
+
+  const mockSubmissionRepository = {
+    create: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    createQueryBuilder: jest.fn(() => ({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany: jest.fn(),
+    })),
+  };
+
+  const mockCourseCatalogRepository = {
+    findOne: jest.fn(),
+  };
+
+  const mockStorageService = {
+    uploadFile: jest.fn(),
+  };
+
+  const mockSubmissions: Submission[] = [
+    {
+      submissionid: 1,
+      practitioneremail: 'test1@example.com',
+      coursecode: 'CC101',
+      coursename: 'Course 1',
+      hourscompleted: 10,
+      hoursallocated: 10,
+      islisted: true,
+      dateofcompletion: '2023-01-15',
+      certificateguid: 'guid1',
+      createdtimestamp: new Date(),
+      lastmodifiedtimestamp: new Date(),
+    },
+    {
+      submissionid: 2,
+      practitioneremail: 'test2@example.com',
+      coursecode: 'CC102',
+      coursename: 'Course 2',
+      hourscompleted: 20,
+      hoursallocated: 20,
+      islisted: true,
+      dateofcompletion: '2024-03-20',
+      certificateguid: 'guid2',
+      createdtimestamp: new Date(),
+      lastmodifiedtimestamp: new Date(),
+    },
+    {
+      submissionid: 3,
+      practitioneremail: 'test1@example.com',
+      coursecode: 'CC103',
+      coursename: 'Course 3',
+      hourscompleted: 15,
+      hoursallocated: 15,
+      islisted: false,
+      dateofcompletion: '2023-06-01',
+      certificateguid: 'guid3',
+      createdtimestamp: new Date(),
+      lastmodifiedtimestamp: new Date(),
+    },
+  ];
+
+  const mockCourseCatalogs: CourseCatalog[] = [
+    {
+      coursecode: 'CC101',
+      marketoffering: 'Cloud',
+      learningpillar: 'AI/ML',
+      coursename: 'Course 1',
+      courselink: 'link1',
+      coursedescription: 'desc1',
+      duration: 10,
+      vendorplatform: 'platform1',
+      courselevel: 'level1',
+      courseorcertification: 'course',
+      paidorfree: 'paid',
+      keywords: 'key1',
+      isactive: true,
+      createdtimestamp: new Date(),
+      lastmodifiedtimestamp: new Date(),
+    },
+    {
+      coursecode: 'CC102',
+      marketoffering: 'Security',
+      learningpillar: 'DevOps',
+      coursename: 'Course 2',
+      courselink: 'link2',
+      coursedescription: 'desc2',
+      duration: 20,
+      vendorplatform: 'platform2',
+      courselevel: 'level2',
+      courseorcertification: 'certification',
+      paidorfree: 'free',
+      keywords: 'key2',
+      isactive: true,
+      createdtimestamp: new Date(),
+      lastmodifiedtimestamp: new Date(),
+    },
+    {
+      coursecode: 'CC103',
+      marketoffering: 'Cloud',
+      learningpillar: 'AI/ML',
+      coursename: 'Course 3',
+      courselink: 'link3',
+      coursedescription: 'desc3',
+      duration: 15,
+      vendorplatform: 'platform3',
+    courselevel: 'level3',
+    courseorcertification: 'course',
+      paidorfree: 'paid',
+      keywords: 'key3',
+      isactive: false,
+      createdtimestamp: new Date(),
+      lastmodifiedtimestamp: new Date(),
+    },
+  ];
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -60,6 +163,9 @@ describe('SubmissionService', () => {
     }).compile();
 
     service = module.get<SubmissionService>(SubmissionService);
+    submissionRepository = module.get<Repository<Submission>>(
+      getRepositoryToken(Submission),
+    );
   });
 
   afterEach(() => {
@@ -124,7 +230,7 @@ describe('SubmissionService', () => {
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({
-        where: { coursecode: 'C-123', IsActive: true },
+        where: { coursecode: 'C-123', isactive: true },
       });
       expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
         where: {
@@ -250,7 +356,7 @@ describe('SubmissionService', () => {
       expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({
         where: {
           coursecode: 'C-INACTIVE',
-          IsActive: true,
+          isactive: true,
         },
       });
     });
@@ -356,6 +462,150 @@ describe('SubmissionService', () => {
           'File size exceeds the limit of 2MB. Please upload a correct file.',
         ),
       );
+    });
+  });
+
+  describe('findAll', () => {
+    let queryBuilder: any;
+
+    beforeEach(() => {
+      queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockSubmissions),
+      };
+      mockSubmissionRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    });
+
+    it('should return all submissions when no filters are provided', async () => {
+      const filterDto: GetSubmissionFilterDto = {};
+      const result = await service.findAll(filterDto);
+
+      expect(mockSubmissionRepository.createQueryBuilder).toHaveBeenCalledWith('submission');
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'CourseCatalog',
+        'courseCatalog',
+        'submission.coursecode = courseCatalog.coursecode',
+      );
+      expect(queryBuilder.andWhere).not.toHaveBeenCalled();
+      expect(queryBuilder.getMany).toHaveBeenCalled();
+      expect(result).toEqual(mockSubmissions);
+    });
+
+    it('should filter by practitioneremail', async () => {
+      const filterDto: GetSubmissionFilterDto = { practitioneremail: 'test1@example.com' };
+      const filteredSubmissions = mockSubmissions.filter(s => s.practitioneremail === 'test1@example.com');
+      queryBuilder.getMany.mockResolvedValue(filteredSubmissions);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'submission.practitioneremail = :practitioneremail',
+        { practitioneremail: 'test1@example.com' },
+      );
+      expect(result).toEqual(filteredSubmissions);
+    });
+
+    it('should filter by coursecode', async () => {
+      const filterDto: GetSubmissionFilterDto = { coursecode: 'CC102' };
+      const filteredSubmissions = mockSubmissions.filter(s => s.coursecode === 'CC102');
+      queryBuilder.getMany.mockResolvedValue(filteredSubmissions);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'submission.coursecode = :coursecode',
+        { coursecode: 'CC102' },
+      );
+      expect(result).toEqual(filteredSubmissions);
+    });
+
+    it('should filter by marketoffering', async () => {
+      const filterDto: GetSubmissionFilterDto = { marketoffering: 'Cloud' };
+      const filteredSubmissions = mockSubmissions.filter(s =>
+        mockCourseCatalogs.find(cc => cc.coursecode === s.coursecode)?.marketoffering === 'Cloud'
+      );
+      queryBuilder.getMany.mockResolvedValue(filteredSubmissions);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'courseCatalog.marketoffering = :marketoffering',
+        { marketoffering: 'Cloud' },
+      );
+      expect(result).toEqual(filteredSubmissions);
+    });
+
+    it('should filter by learningpillar', async () => {
+      const filterDto: GetSubmissionFilterDto = { learningpillar: 'DevOps' };
+      const filteredSubmissions = mockSubmissions.filter(s =>
+        mockCourseCatalogs.find(cc => cc.coursecode === s.coursecode)?.learningpillar === 'DevOps'
+      );
+      queryBuilder.getMany.mockResolvedValue(filteredSubmissions);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'courseCatalog.learningpillar = :learningpillar',
+        { learningpillar: 'DevOps' },
+      );
+      expect(result).toEqual(filteredSubmissions);
+    });
+
+    it('should filter by completionyear', async () => {
+      const filterDto: GetSubmissionFilterDto = { completionyear: 2024 };
+      const filteredSubmissions = mockSubmissions.filter(s =>
+        new Date(s.dateofcompletion).getFullYear() === 2024
+      );
+      queryBuilder.getMany.mockResolvedValue(filteredSubmissions);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'EXTRACT(YEAR FROM submission.dateofcompletion) = :year',
+        { year: 2024 },
+      );
+      expect(result).toEqual(filteredSubmissions);
+    });
+
+    it('should filter by multiple criteria', async () => {
+      const filterDto: GetSubmissionFilterDto = {
+        practitioneremail: 'test1@example.com',
+        marketoffering: 'Cloud',
+        completionyear: 2023,
+      };
+      const filteredSubmissions = mockSubmissions.filter(s =>
+        s.practitioneremail === 'test1@example.com' &&
+        mockCourseCatalogs.find(cc => cc.coursecode === s.coursecode)?.marketoffering === 'Cloud' &&
+        new Date(s.dateofcompletion).getFullYear() === 2023
+      );
+      queryBuilder.getMany.mockResolvedValue(filteredSubmissions);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'submission.practitioneremail = :practitioneremail',
+        { practitioneremail: 'test1@example.com' },
+      );
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'courseCatalog.marketoffering = :marketoffering',
+        { marketoffering: 'Cloud' },
+      );
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'EXTRACT(YEAR FROM submission.dateofcompletion) = :year',
+        { year: 2023 },
+      );
+      expect(result).toEqual(filteredSubmissions);
+    });
+
+    it('should return an empty array if no submissions match the filters', async () => {
+      const filterDto: GetSubmissionFilterDto = { practitioneremail: 'nonexistent@example.com' };
+      queryBuilder.getMany.mockResolvedValue([]);
+
+      const result = await service.findAll(filterDto);
+
+      expect(queryBuilder.getMany).toHaveBeenCalled();
+      expect(result).toEqual([]);
     });
   });
 });

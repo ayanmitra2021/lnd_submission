@@ -4,7 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SubmissionModule } from './submission/submission.module';
+import { CourseCatalogRefreshModule } from './coursecatalog-refresh/coursecatalog-refresh.module';
 import { StorageModule } from './common/storage/storage.module';
+import { CoursecatalogModule } from './coursecatalog/coursecatalog.module';
 
 @Module({
   imports: [
@@ -37,6 +39,10 @@ import { StorageModule } from './common/storage/storage.module';
     SubmissionModule,
 
     StorageModule,
+
+    CourseCatalogRefreshModule,
+
+    CoursecatalogModule,
   ],
   controllers: [AppController],
   providers: [AppService],
