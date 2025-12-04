@@ -54,6 +54,11 @@ export class SubmissionService {
     let hoursallocated: number;
     let islisted: boolean;
 
+    const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(createSubmissionDto.marketOffering);
+    if (!isMarketOfferingValid) {
+        throw new BadRequestException(`Market Offering "${createSubmissionDto.marketOffering}" is not valid.`);
+    }
+
     if (createSubmissionDto.courseCode === this.unlistedCourseCode) {
       hoursallocated = createSubmissionDto.hoursCompleted;
       islisted = false;
@@ -68,13 +73,6 @@ export class SubmissionService {
         throw new BadRequestException(
           `Course with code "${createSubmissionDto.courseCode}" is either not available or is inactive.`,
         );
-      }
-      // Validate market offering for listed courses
-      if (course.marketoffering) {
-        const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(course.marketoffering);
-        if (!isMarketOfferingValid) {
-          throw new BadRequestException(`Market Offering "${course.marketoffering}" associated with course "${createSubmissionDto.courseCode}" is not valid.`);
-        }
       }
       hoursallocated = course.duration;
       islisted = true;
