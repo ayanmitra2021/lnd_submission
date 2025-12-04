@@ -31,6 +31,10 @@ export class MarketofferingService {
     return this.marketofferingRepository.findOne({ where: { marketofferingname } });
   }
 
+  async findOneById(id: number): Promise<MarketOffering | undefined> {
+    return this.marketofferingRepository.findOne({ where: { marketofferingid: id } });
+  }
+
   async validateMarketOffering(marketOfferingName: string): Promise<boolean> {
     if (!marketOfferingName) {
       return false;

@@ -6,6 +6,7 @@ import { CourseCatalog } from '../submission/entities/coursecatalog.entity';
 import * as csv from 'csv-parser';
 import { Readable } from 'stream';
 import { MarketofferingService } from '../marketoffering/marketoffering.service'; // Import the service
+import { LearningPillarService } from '../learningpillar/learningpillar.service';
 
 export interface CsvRow {
   'Course ID (DO NOT CHANGE)': string;
@@ -46,7 +47,8 @@ export class CourseCatalogRefreshService {
   constructor(
     @InjectRepository(CourseCatalog)
     private readonly courseCatalogRepository: Repository<CourseCatalog>,
-    private readonly marketofferingService: MarketofferingService, // Inject MarketofferingService
+    private readonly marketofferingService: MarketofferingService,
+    private readonly learningPillarService: LearningPillarService, // Inject LearningPillarService // Inject MarketofferingService
   ) {}
 
   async processCsv(file: Express.Multer.File): Promise<RefreshResult> {
@@ -116,17 +118,34 @@ export class CourseCatalogRefreshService {
         if (missingFields.length > 0) {
           result.errors.push({ courseId, errors: [`Missing mandatory fields: ${missingFields.join(', ')}`] });
           return;
-        }
-  
-        // Market Offering validation
-        const marketOfferingName = row['Market Offering / Specialty'];
-        const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(marketOfferingName);
-        if (!isMarketOfferingValid) {
-            result.errors.push({ courseId, errors: [`Market Offering / Specialty "${marketOfferingName}" is not valid.`] });
-            return;
-        }
-
-        // Duration validation
+                }
+          
+                // Market Offering validation
+                const marketOfferingName = row['Market Offering / Specialty'];
+                const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(marketOfferingName);
+                if (!isMarketOfferingValid) {
+                    result.errors.push({ courseId, errors: [`Market Offering / Specialty "${marketOfferingName}" is not valid.`] });
+                    return;
+                }
+        
+                // Learning Pillar validation
+                const learningPillarName = row['Learning Pillar / L5'];
+                const isLearningPillarValid = await this.learningPillarService.validateLearningPillar(learningPillarName);
+                if (!isLearningPillarValid) {
+                    result.errors.push({ courseId, errors: [`Learning Pillar / L5 "${learningPillarName}" is not valid.`] });
+                    return;
+                }
+        
+                // Market Offering - Learning Pillar combination validation
+                const isCombinationValid = await this.learningPillarService.validateMarketOfferingLearningPillarCombination(
+                    marketOfferingName,
+                    learningPillarName,
+                );
+                if (!isCombinationValid) {
+                    result.errors.push({ courseId, errors: [`Combination of Market Offering "${marketOfferingName}" and Learning Pillar "${learningPillarName}" is not valid.`] });
+                    return;
+                }
+                // Duration validation
         const duration = parseFloat(row['duration (Hr)']);
         if (isNaN(duration) || duration < 0 || duration > 30000) {
             result.errors.push({ courseId, errors: ['Invalid duration. Must be a number between 0 and 30000.'] });

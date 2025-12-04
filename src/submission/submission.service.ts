@@ -10,6 +10,7 @@ import { StorageService } from '../common/storage/storage.service.interface';
 import * as path from 'path';
 import { CourseCatalog } from './entities/coursecatalog.entity';
 import { MarketofferingService } from '../marketoffering/marketoffering.service';
+import { LearningPillarService } from '../learningpillar/learningpillar.service';
 
 @Injectable()
 export class SubmissionService {
@@ -24,7 +25,8 @@ export class SubmissionService {
     private readonly courseCatalogRepository: Repository<CourseCatalog>,
     private readonly storageService: StorageService,
     private readonly configService: ConfigService,
-    private readonly marketofferingService: MarketofferingService, // Inject MarketofferingService
+    private readonly marketofferingService: MarketofferingService,
+    private readonly learningPillarService: LearningPillarService, // Inject LearningPillarService // Inject MarketofferingService
   ) {
     this.maxFileSize = +this.configService.get<number>('MAX_FILE_SIZE_BYTES');
     this.unlistedCourseCode = this.configService.get<string>('UNLISTED_COURSE_CODE');
@@ -57,6 +59,21 @@ export class SubmissionService {
     const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(createSubmissionDto.marketOffering);
     if (!isMarketOfferingValid) {
         throw new BadRequestException(`Market Offering "${createSubmissionDto.marketOffering}" is not valid.`);
+    }
+
+    // Learning Pillar validation
+    const isLearningPillarValid = await this.learningPillarService.validateLearningPillar(createSubmissionDto.learningPillarL5);
+    if (!isLearningPillarValid) {
+        throw new BadRequestException(`Learning Pillar "${createSubmissionDto.learningPillarL5}" is not valid.`);
+    }
+
+    // Market Offering - Learning Pillar combination validation
+    const isCombinationValid = await this.learningPillarService.validateMarketOfferingLearningPillarCombination(
+        createSubmissionDto.marketOffering,
+        createSubmissionDto.learningPillarL5,
+    );
+    if (!isCombinationValid) {
+        throw new BadRequestException(`Combination of Market Offering "${createSubmissionDto.marketOffering}" and Learning Pillar "${createSubmissionDto.learningPillarL5}" is not valid.`);
     }
 
     if (createSubmissionDto.courseCode === this.unlistedCourseCode) {

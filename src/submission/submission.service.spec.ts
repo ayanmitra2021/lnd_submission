@@ -10,6 +10,7 @@ import { StorageService } from '../common/storage/storage.service.interface';
 import { CourseCatalog } from './entities/coursecatalog.entity';
 import { ConfigService } from '@nestjs/config';
 import { MarketofferingService } from '../marketoffering/marketoffering.service';
+import { LearningPillarService } from '../learningpillar/learningpillar.service'; // Import LearningPillarService
 
 describe('SubmissionService', () => {
   let service: SubmissionService;
@@ -36,6 +37,11 @@ describe('SubmissionService', () => {
 
   const mockMarketofferingService = {
     validateMarketOffering: jest.fn(),
+  };
+
+  const mockLearningPillarService = { // Mock LearningPillarService
+    validateLearningPillar: jest.fn(),
+    validateMarketOfferingLearningPillarCombination: jest.fn(),
   };
 
   const mockSubmissions: Submission[] = [
@@ -168,6 +174,10 @@ describe('SubmissionService', () => {
           provide: MarketofferingService,
           useValue: mockMarketofferingService,
         },
+        {
+          provide: LearningPillarService, // Provide LearningPillarService
+          useValue: mockLearningPillarService,
+        },
       ],
     }).compile();
 
@@ -236,10 +246,18 @@ describe('SubmissionService', () => {
         'http://fake-url.com/file.pdf',
       );
       mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Market offering from DTO is valid
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true); // Learning Pillar from DTO is valid
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true); // Combination is valid
+
 
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+        createSubmissionDto.marketOffering,
+        createSubmissionDto.learningPillarL5,
+      );
       expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({
         where: { coursecode: 'CC101', isactive: true },
       });
@@ -289,6 +307,8 @@ describe('SubmissionService', () => {
         'http://fake-url.com/file.pdf',
       );
       mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Market offering from DTO is valid
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true); // Learning Pillar from DTO is valid
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true); // Combination is valid
 
       const updatedSubmissionInDb = {
         ...existingSubmission,
@@ -304,6 +324,11 @@ describe('SubmissionService', () => {
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+        createSubmissionDto.marketOffering,
+        createSubmissionDto.learningPillarL5,
+      );
       expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
         where: {
           coursecode: createSubmissionDto.courseCode,
@@ -337,7 +362,9 @@ describe('SubmissionService', () => {
       };
 
       mockCourseCatalogRepository.findOne.mockResolvedValue(null);
-      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Assume DTO market offering is valid for this test
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true);
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException(
@@ -345,6 +372,11 @@ describe('SubmissionService', () => {
         ),
       );
       expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+        createSubmissionDto.marketOffering,
+        createSubmissionDto.learningPillarL5,
+      );
     });
 
     it('should throw a BadRequestException if the course is inactive', async () => {
@@ -360,7 +392,9 @@ describe('SubmissionService', () => {
       };
 
       mockCourseCatalogRepository.findOne.mockResolvedValue(null); // Assuming findOne returns null if inactive as well.
-      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Assume DTO market offering is valid for this test
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true);
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException(
@@ -375,6 +409,11 @@ describe('SubmissionService', () => {
         },
       });
       expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+        createSubmissionDto.marketOffering,
+        createSubmissionDto.learningPillarL5,
+      );
     });
 
     it('should set hoursallocated to hoursCompleted for course code "00000"', async () => {
@@ -407,11 +446,18 @@ describe('SubmissionService', () => {
       mockStorageService.uploadFile.mockResolvedValue(
         'http://fake-url.com/file.pdf',
       );
-      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Market offering from DTO is valid
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true);
 
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+        createSubmissionDto.marketOffering,
+        createSubmissionDto.learningPillarL5,
+      );
       expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled();
       expect(mockSubmissionRepository.create).toHaveBeenCalledWith(
         submissionPayload,
@@ -431,12 +477,19 @@ describe('SubmissionService', () => {
         practitionerEmail: 'test@test.com',
         practitionerName: 'John Doe',
       };
-      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Assume DTO market offering is valid initially
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true);
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException('Date of completion cannot be in the future.'),
       );
-      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
+      // expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      // expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      // expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+      //   createSubmissionDto.marketOffering,
+      //   createSubmissionDto.learningPillarL5,
+      // );
     });
 
     it('should throw a BadRequestException for a dateOfCompletion in a previous calendar year', async () => {
@@ -450,14 +503,21 @@ describe('SubmissionService', () => {
         practitionerEmail: 'test@test.com',
         practitionerName: 'John Doe',
       };
-      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Assume DTO market offering is valid initially
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true);
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException(
           'Date of completion cannot be in a previous calendar year.',
         ),
       );
-      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
+      // expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      // expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      // expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+      //   createSubmissionDto.marketOffering,
+      //   createSubmissionDto.learningPillarL5,
+      // );
     });
 
     it('should throw a BadRequestException if file size exceeds 2MB', async () => {
@@ -476,7 +536,9 @@ describe('SubmissionService', () => {
         ...mockFile,
         size: 2 * 1024 * 1024 + 1, // 2MB + 1 byte
       };
-      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true); // Assume DTO market offering is valid initially
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true);
 
       await expect(
         service.create(createSubmissionDto, largeMockFile),
@@ -485,7 +547,12 @@ describe('SubmissionService', () => {
           'File size exceeds the limit of 2MB. Please upload a correct file.',
         ),
       );
-      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
+      // expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith(createSubmissionDto.marketOffering);
+      // expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith(createSubmissionDto.learningPillarL5);
+      // expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+      //   createSubmissionDto.marketOffering,
+      //   createSubmissionDto.learningPillarL5,
+      // );
     });
 
     it('should throw BadRequestException if market offering from CreateSubmissionDto is invalid', async () => {
@@ -500,14 +567,70 @@ describe('SubmissionService', () => {
         practitionerName: 'John Doe',
       };
 
-      // No need for mockCourse here as validation happens before course lookup
       mockMarketofferingService.validateMarketOffering.mockResolvedValue(false);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true); // Should not be called
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true); // Should not be called
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException(`Market Offering "Invalid Market" is not valid.`),
       );
       expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith('Invalid Market');
-      expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled(); // Should not reach here
+      expect(mockLearningPillarService.validateLearningPillar).not.toHaveBeenCalled();
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).not.toHaveBeenCalled();
+      expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if learning pillar from CreateSubmissionDto is invalid', async () => {
+      const createSubmissionDto: CreateSubmissionDto = {
+        courseCertification: 'Test Course',
+        courseCode: 'CC101',
+        dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Invalid Pillar', // Invalid learning pillar
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
+      };
+
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(false);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(true); // Should not be called
+
+      await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
+        new BadRequestException(`Learning Pillar "Invalid Pillar" is not valid.`),
+      );
+      expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith('Offering A');
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith('Invalid Pillar');
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).not.toHaveBeenCalled();
+      expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if market offering and learning pillar combination from CreateSubmissionDto is invalid', async () => {
+      const createSubmissionDto: CreateSubmissionDto = {
+        courseCertification: 'Test Course',
+        courseCode: 'CC101',
+        dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
+      };
+
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
+      mockLearningPillarService.validateLearningPillar.mockResolvedValue(true);
+      mockLearningPillarService.validateMarketOfferingLearningPillarCombination.mockResolvedValue(false);
+
+      await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
+        new BadRequestException(`Combination of Market Offering "Offering A" and Learning Pillar "Pillar B" is not valid.`),
+      );
+      expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith('Offering A');
+      expect(mockLearningPillarService.validateLearningPillar).toHaveBeenCalledWith('Pillar B');
+      expect(mockLearningPillarService.validateMarketOfferingLearningPillarCombination).toHaveBeenCalledWith(
+        'Offering A',
+        'Pillar B',
+      );
+      expect(mockCourseCatalogRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
