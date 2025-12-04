@@ -7,6 +7,7 @@ import { SubmissionModule } from './submission/submission.module';
 import { CourseCatalogRefreshModule } from './coursecatalog-refresh/coursecatalog-refresh.module';
 import { StorageModule } from './common/storage/storage.module';
 import { CoursecatalogModule } from './coursecatalog/coursecatalog.module';
+import { MarketofferingModule } from './marketoffering/marketoffering.module';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { CoursecatalogModule } from './coursecatalog/coursecatalog.module';
     CourseCatalogRefreshModule,
 
     CoursecatalogModule,
+
+    MarketofferingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

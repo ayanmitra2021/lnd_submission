@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { CourseCatalog } from '../submission/entities/coursecatalog.entity';
 import * as csv from 'csv-parser';
 import { Readable } from 'stream';
+import { MarketofferingService } from '../marketoffering/marketoffering.service'; // Import the service
 
 export interface CsvRow {
   'Course ID (DO NOT CHANGE)': string;
@@ -45,6 +46,7 @@ export class CourseCatalogRefreshService {
   constructor(
     @InjectRepository(CourseCatalog)
     private readonly courseCatalogRepository: Repository<CourseCatalog>,
+    private readonly marketofferingService: MarketofferingService, // Inject MarketofferingService
   ) {}
 
   async processCsv(file: Express.Multer.File): Promise<RefreshResult> {
@@ -93,6 +95,8 @@ export class CourseCatalogRefreshService {
     });
   }
 
+
+
     private async processRow(row: CsvRow, result: RefreshResult): Promise<void> {
       const courseId = row['Course ID (DO NOT CHANGE)'];
       if (!courseId) {
@@ -114,6 +118,14 @@ export class CourseCatalogRefreshService {
           return;
         }
   
+        // Market Offering validation
+        const marketOfferingName = row['Market Offering / Specialty'];
+        const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(marketOfferingName);
+        if (!isMarketOfferingValid) {
+            result.errors.push({ courseId, errors: [`Market Offering / Specialty "${marketOfferingName}" is not valid.`] });
+            return;
+        }
+
         // Duration validation
         const duration = parseFloat(row['duration (Hr)']);
         if (isNaN(duration) || duration < 0 || duration > 30000) {

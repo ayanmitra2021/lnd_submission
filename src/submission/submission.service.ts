@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '../common/storage/storage.service.interface';
 import * as path from 'path';
 import { CourseCatalog } from './entities/coursecatalog.entity';
+import { MarketofferingService } from '../marketoffering/marketoffering.service';
 
 @Injectable()
 export class SubmissionService {
@@ -23,6 +24,7 @@ export class SubmissionService {
     private readonly courseCatalogRepository: Repository<CourseCatalog>,
     private readonly storageService: StorageService,
     private readonly configService: ConfigService,
+    private readonly marketofferingService: MarketofferingService, // Inject MarketofferingService
   ) {
     this.maxFileSize = +this.configService.get<number>('MAX_FILE_SIZE_BYTES');
     this.unlistedCourseCode = this.configService.get<string>('UNLISTED_COURSE_CODE');
@@ -66,6 +68,13 @@ export class SubmissionService {
         throw new BadRequestException(
           `Course with code "${createSubmissionDto.courseCode}" is either not available or is inactive.`,
         );
+      }
+      // Validate market offering for listed courses
+      if (course.marketoffering) {
+        const isMarketOfferingValid = await this.marketofferingService.validateMarketOffering(course.marketoffering);
+        if (!isMarketOfferingValid) {
+          throw new BadRequestException(`Market Offering "${course.marketoffering}" associated with course "${createSubmissionDto.courseCode}" is not valid.`);
+        }
       }
       hoursallocated = course.duration;
       islisted = true;

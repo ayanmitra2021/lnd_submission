@@ -9,6 +9,7 @@ import { BadRequestException } from '@nestjs/common';
 import { StorageService } from '../common/storage/storage.service.interface';
 import { CourseCatalog } from './entities/coursecatalog.entity';
 import { ConfigService } from '@nestjs/config';
+import { MarketofferingService } from '../marketoffering/marketoffering.service';
 
 describe('SubmissionService', () => {
   let service: SubmissionService;
@@ -31,6 +32,10 @@ describe('SubmissionService', () => {
 
   const mockStorageService = {
     uploadFile: jest.fn(),
+  };
+
+  const mockMarketofferingService = {
+    validateMarketOffering: jest.fn(),
   };
 
   const mockSubmissions: Submission[] = [
@@ -159,6 +164,10 @@ describe('SubmissionService', () => {
             }),
           },
         },
+        {
+          provide: MarketofferingService,
+          useValue: mockMarketofferingService,
+        },
       ],
     }).compile();
 
@@ -197,7 +206,7 @@ describe('SubmissionService', () => {
     it('should create a new submission if one does not exist for the current year', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
         courseCertification: 'Test Course',
-        courseCode: 'C-123',
+        courseCode: 'CC101',
         dateOfCompletion: `${currentYear}-01-15`,
         hoursCompleted: 10,
         learningPillarL5: 'Pillar B',
@@ -217,7 +226,7 @@ describe('SubmissionService', () => {
         practitioneremail: createSubmissionDto.practitionerEmail,
       };
       const savedSubmission = { ...submissionPayload, submissionid: 1 };
-      const mockCourse = { coursecode: 'C-123', duration: 20 };
+      const mockCourse = { coursecode: 'CC101', duration: 20, marketoffering: 'Cloud' };
 
       mockCourseCatalogRepository.findOne.mockResolvedValue(mockCourse);
       mockSubmissionRepository.findOne.mockResolvedValue(null);
@@ -226,12 +235,14 @@ describe('SubmissionService', () => {
       mockStorageService.uploadFile.mockResolvedValue(
         'http://fake-url.com/file.pdf',
       );
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
 
       const result = await service.create(createSubmissionDto, mockFile);
 
       expect(mockCourseCatalogRepository.findOne).toHaveBeenCalledWith({
-        where: { coursecode: 'C-123', isactive: true },
+        where: { coursecode: 'CC101', isactive: true },
       });
+      expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith('Cloud');
       expect(mockSubmissionRepository.findOne).toHaveBeenCalledWith({
         where: {
           coursecode: createSubmissionDto.courseCode,
@@ -253,7 +264,7 @@ describe('SubmissionService', () => {
     it('should update an existing submission if one exists for the current year', async () => {
       const createSubmissionDto: CreateSubmissionDto = {
         courseCertification: 'Updated Course Name',
-        courseCode: 'C-123',
+        courseCode: 'CC101',
         dateOfCompletion: `${currentYear}-03-20`,
         hoursCompleted: 12,
         learningPillarL5: 'Pillar B',
@@ -263,20 +274,21 @@ describe('SubmissionService', () => {
       };
       const existingSubmission = {
         certificateguid: 'some-guid',
-        coursecode: 'C-123',
+        coursecode: 'CC101',
         coursename: 'Old Course Name',
         dateofcompletion: `${currentYear}-01-15`,
         hourscompleted: 10,
         practitioneremail: 'test@test.com',
         submissionid: 1,
       };
-      const mockCourse = { coursecode: 'C-123', duration: 25 };
+      const mockCourse = { coursecode: 'CC101', duration: 25, marketoffering: 'Cloud' };
 
       mockCourseCatalogRepository.findOne.mockResolvedValue(mockCourse);
       mockSubmissionRepository.findOne.mockResolvedValue(existingSubmission);
       mockStorageService.uploadFile.mockResolvedValue(
         'http://fake-url.com/file.pdf',
       );
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(true);
 
       const updatedSubmissionInDb = {
         ...existingSubmission,
@@ -300,7 +312,7 @@ describe('SubmissionService', () => {
           practitioneremail: createSubmissionDto.practitionerEmail,
         },
       });
-
+      expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith('Cloud');
       expect(mockSubmissionRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           coursename: 'Updated Course Name',
@@ -325,12 +337,14 @@ describe('SubmissionService', () => {
       };
 
       mockCourseCatalogRepository.findOne.mockResolvedValue(null);
+      // No market offering validation should occur if course is not found
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException(
           `Course with code "C-INVALID" is either not available or is inactive.`,
         ),
       );
+      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
     });
 
     it('should throw a BadRequestException if the course is inactive', async () => {
@@ -345,7 +359,7 @@ describe('SubmissionService', () => {
         practitionerName: 'John Doe',
       };
 
-      mockCourseCatalogRepository.findOne.mockResolvedValue(null);
+      mockCourseCatalogRepository.findOne.mockResolvedValue(null); // Assuming findOne returns null if inactive as well.
 
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException(
@@ -359,6 +373,7 @@ describe('SubmissionService', () => {
           isactive: true,
         },
       });
+      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
     });
 
     it('should set hoursallocated to hoursCompleted for course code "00000"', async () => {
@@ -391,6 +406,8 @@ describe('SubmissionService', () => {
       mockStorageService.uploadFile.mockResolvedValue(
         'http://fake-url.com/file.pdf',
       );
+      // No market offering validation for unlisted courses
+      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
 
       const result = await service.create(createSubmissionDto, mockFile);
 
@@ -417,6 +434,7 @@ describe('SubmissionService', () => {
       await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
         new BadRequestException('Date of completion cannot be in the future.'),
       );
+      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
     });
 
     it('should throw a BadRequestException for a dateOfCompletion in a previous calendar year', async () => {
@@ -436,6 +454,7 @@ describe('SubmissionService', () => {
           'Date of completion cannot be in a previous calendar year.',
         ),
       );
+      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
     });
 
     it('should throw a BadRequestException if file size exceeds 2MB', async () => {
@@ -462,6 +481,30 @@ describe('SubmissionService', () => {
           'File size exceeds the limit of 2MB. Please upload a correct file.',
         ),
       );
+      expect(mockMarketofferingService.validateMarketOffering).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if market offering from course catalog is invalid', async () => {
+      const createSubmissionDto: CreateSubmissionDto = {
+        courseCertification: 'Test Course',
+        courseCode: 'CC101',
+        dateOfCompletion: `${currentYear}-01-15`,
+        hoursCompleted: 10,
+        learningPillarL5: 'Pillar B',
+        marketOffering: 'Offering A',
+        practitionerEmail: 'test@test.com',
+        practitionerName: 'John Doe',
+      };
+
+      const mockCourse = { coursecode: 'CC101', duration: 20, marketoffering: 'Invalid Market' };
+
+      mockCourseCatalogRepository.findOne.mockResolvedValue(mockCourse);
+      mockMarketofferingService.validateMarketOffering.mockResolvedValue(false);
+
+      await expect(service.create(createSubmissionDto, mockFile)).rejects.toThrow(
+        new BadRequestException(`Market Offering "Invalid Market" associated with course "CC101" is not valid.`),
+      );
+      expect(mockMarketofferingService.validateMarketOffering).toHaveBeenCalledWith('Invalid Market');
     });
   });
 
